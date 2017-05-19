@@ -1,4 +1,4 @@
-from flask import jsonify, abort, g
+from flask import jsonify, abort, g, request
 from flask.ext.httpauth import HTTPBasicAuth
 from app import app, db, models
 
@@ -30,6 +30,52 @@ def get_User(id):
     if not user:
         abort(500)
     return jsonify(user)
+
+
+@app.route('/Data/api/v1.0/User', methods=['POST'])
+@auth.login_required
+def add_User():
+    nickName = request.json['nickName']
+    email = request.json['email']
+    password = request.json['password']
+    if models.User.query.filter_by(nickName=nickName).first() or models.User.query.filter_by(email=email).first():
+        abort(500)
+    nwUser = models.User(nickName=nickName, email=email)
+    nwUser.hash_password(password)
+    db.session.add(nwUser)
+    db.session.commit()
+    return "OK", 200
+
+
+@app.route('/Data/api/v1.0/User', methods=['PUT'])
+@auth.login_required
+def ch_User():
+    nickName = None
+    email = None
+    password = None
+    userNick = None
+    userEmail = None
+    if 'nickName' in request.json:
+        nickName = request.json['nickName']
+        userNick = models.User.query.filter_by(nickName=nickName).first()
+    if 'email' in request.json:
+        email = request.json['email']
+        userEmail = models.User.query.filter_by(email=email).first()
+    if 'password' in request.json: password = request.json['password']
+    if userEmail or userEmail:
+        abort(500)
+    g.user.ch(nickName=nickName, email=email, password=password)
+    db.session.add(g.user)
+    db.session.commit()
+    return "OK", 200
+
+
+@app.route('/Data/api/v1.0/User', methods=['DELETE'])
+@auth.login_required
+def del_User():
+    db.session.delete(g.user)
+    db.session.commit()
+    return "OK", 200
 
 
 @auth.verify_password

@@ -8,11 +8,16 @@ class User(db.Model):
     password = db.Column(db.String(120))
     mods = db.relationship('Mods', backref = 'author', lazy = 'dynamic')
 
-    def hash_passw(self, password):
+    def hash_password(self, password):
         self.password = pwd_context.encrypt(password)
 
     def verify_password(self, password):
         return pwd_context.verify(password, self.password)
+
+    def ch(self, nickName, email, password):
+        if(nickName): self.nickName = nickName
+        if(email): self.email = email
+        if password: self.hash_password(password)
 
 class Mods(db.Model):
     id = db.Column(db.Integer, primary_key = True)
