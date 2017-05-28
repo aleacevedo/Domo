@@ -1,10 +1,15 @@
-import unittest, requests, sys, os
+import unittest, requests, sys
+sys.path.append("../FuncionesVarias")
+from FuncionesVarias import resetarDataBase
 
 AUTH = ("admin", "admin")
 BASEURL = "http://localhost:5555/Data/api/v1.0"
 
 
 class DataBaseTest(unittest.TestCase):
+
+    def setUp(self):
+        resetarDataBase()
 
     def test_emptyDataBase(self):
         """ La base de datos se crea siempre con el usuario admin"""
@@ -21,7 +26,7 @@ class DataBaseTest(unittest.TestCase):
         r = requests.post(url, json=payload1, auth=AUTH)
         self.assertEquals(r.status_code, 200, "El usuario 1 no pudo ser agregado")
         r = r = requests.post(url, json=payload2, auth=nwuser)
-        self.assertEquals(r.status_code, 200, "El usuario 2 no pudo ser agregado, revise el usuario 1")
+        self.assertEquals(r.status_code, 200, "El usuario 2 no pudo ser agregado, revise el usuario 1p")
 
 
 if __name__ == '__main__':
