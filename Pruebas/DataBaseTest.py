@@ -11,7 +11,7 @@ class DataBaseTest(unittest.TestCase):
     def setUp(self):
         resetarDataBase()
 
-    def test_emptyDataBase(self):
+    def test_emptyUserDataBase(self):
         """ La base de datos se crea siempre con el usuario admin"""
         url = BASEURL + "/Users"
         r = requests.get(url, auth=AUTH)
@@ -30,6 +30,7 @@ class DataBaseTest(unittest.TestCase):
         self.assertEqual(r.json()[nwuser[0]]['nickName'],nwuser[0], "El usuario 1 no fue agregado")
 
     def test_delUserDataBase(self):
+        """Borro usuario, debe responder con status code 200"""
         url = BASEURL + "/User"
         urlusers = BASEURL + "/Users"
         nwuser = ("Alejo", "19051996")
@@ -41,7 +42,8 @@ class DataBaseTest(unittest.TestCase):
         self.assertEqual(len(r.json()), 1, "El usuario no fue borrado")
 
     def test_modUserDataBase(self):
-        url = url = BASEURL + "/User"
+        """Modifico un usuario, debe responder con status code 200"""
+        url = BASEURL + "/User"
         urlusers = BASEURL + "/Users"
         nwuser = ("Alejo", "19051996")
         payload1 = {'email': "ale.acevedo@live.com.ar", 'nickName': "Alejo", 'password': "19051996"}
@@ -59,6 +61,61 @@ class DataBaseTest(unittest.TestCase):
         self.assertEqual(r.status_code, 200, "No se pudo modificar el usuario")
         r = requests.get(urlusers, auth=(modpayload['nickName'], modpayload['password']))
         self.assertEqual(r.status_code, 200, "La password usuario no fue modificado")
+
+    def test_unauthUserDataBase(self):
+        """Trato de modificar la base de datos desde un usuario no autorizado, debe fallar"""
+        url = BASEURL + "/User"
+        nwuser = ("Alejo", "19051996")
+        payload1 = {'email': "ale.acevedo@live.com.ar", 'nickName': "Alejo", 'password': "19051996"}
+        payload2 = {'email': "fede@live.com.ar", 'nickName': "Federico", 'password': "20091995"}
+        r = requests.get(url, auth=nwuser)
+        self.assertEqual(r.status_code, 405, "Usuario no registrado recibio informacion")
+        r = requests.post(url, json=payload1, auth=nwuser)
+        self.assertEqual(r.status_code, 401, "Usuario no registrado agrego usuario")
+        r = requests.put(url, json=payload1, auth=nwuser)
+        self.assertEqual(r.status_code, 401, "Usuario no registrado modifico a otro")
+        r = requests.delete(url, auth=nwuser)
+        self.assertEqual(r.status_code, 401, "Usuario no registrado borro a otro")
+        requests.post(url, json=payload1, auth=AUTH)
+        r = requests.post(url,json=payload2, auth=nwuser)
+        self.assertEqual(r.status_code, 401, "Usuario no admin trato de agregar otro")
+
+    def test_mixUserDataBase(self):
+        """Trato de mezclar los mails de los usuarios, debe devolver status code 500"""
+        url = BASEURL + "/User"
+        payload1 = {'email': "ale.acevedo@live.com.ar", 'nickName': "Alejo", 'password': "19051996"}
+        payload2 = {'email': "fede@live.com.ar", 'nickName': "Federico", 'password': "20091995"}
+        requests.post(url, json=payload1, auth=AUTH)
+        requests.post(url, json=payload2, auth=AUTH)
+        r = requests.post(url, json=payload1, auth=AUTH)
+        self.assertEqual(r.status_code, 500, "Se solaparon los usuarios al agregarse")
+        r = requests.put(url, json=payload1, auth=(payload2['nickName'], payload2['password']))
+        self.assertEqual(r.status_code, 500, "Se solaparon usuarios al modificarse")
+
+    def test_emptyModDataBase(self):
+        """Constato base de datos vacia"""
+        url = BASEURL + "/Mods"
+        r = requests.get(url, auth=AUTH)
+        self.assertEqual(len(r.json()), 0, "Hay algun modulo")
+
+    def test_addModoDataBase(self):
+        """Agrego 100 modulos, debe devolver status code 200 y debe tener atributo new igual a True"""
+        url = BASEURL + "/Mod"
+        urlMods = BASEURL + "/Mods"
+        ip = '192.168.1.'
+        payload = {'uniqueID':0, 'ip':'192.168.0.'}
+        for x in range(100):
+            payload['uniqueID'] = x
+            payload['ip'] = ip + str(x)
+            r = requests.post(url, json=payload, auth=AUTH)
+            self.assertEqual(r.status_code, 200, "El modulo " + str(x) + " fallo")
+        r = requests.get(urlMods, auth=AUTH)
+        r = r.json()
+        for keys in r:
+            self.assertTrue(r[keys]['new'], 'El atributo new del mod ' + keys + " no es True")
+
+    def test_mod(self):
+        pass
 
 
 if __name__ == '__main__':
