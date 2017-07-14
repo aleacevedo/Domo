@@ -13,7 +13,7 @@ def create():
         api.version_control(SQLALCHEMY_DATABASE_URI, SQLALCHEMY_MIGRATE_REPO)
     else:
         api.version_control(SQLALCHEMY_DATABASE_URI, SQLALCHEMY_MIGRATE_REPO, api.version(SQLALCHEMY_MIGRATE_REPO))
-    user = models.User(nickName = 'admin')
+    user = models.User(nickName = 'admin', mods = [])
     user.hash_password('admin')
     db.session.add(user)
     db.session.commit()
