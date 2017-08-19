@@ -1,4 +1,4 @@
-from app import db
+from app import db, sched, mqtt
 from passlib.apps import custom_app_context as pwd_context
 from sqlalchemy.ext.mutable import MutableList
 
@@ -29,11 +29,33 @@ class Mods(db.Model):
     ip = db.Column(db.String(12), unique=True)
     state = db.Column(db.Integer)
     new = db.Column(db.Boolean)
-    tasks = db.Column(MutableList.as_mutable(db.PickleType()))
+    tasks = db.relationship('Task')
+
+    def execute_change(self, newState):
+        self.state = newState
+        mqtt.send_to(self.uniqueID, self.state)
+
 
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    time = db.Column(db.DateTime)
-    nwState = db.Column(db.Integer)
+    nickName = db.Column(db.Integer)
+    hour = db.Column(db.Integer)
+    minute = db.Column(db.Integer)
+    wDay = db.Column(db.Integer)
+    newState = db.Column(db.Integer)
+    idMod = db.Column(db.Integer, db.ForeignKey('mods.id'))
 
+    def save(self, mod):
+        sched.add_job(
+            lambda: mod.execute_change(self.newState),
+            "cron",
+            day_of_week=self.wDay,
+            hour=self.hour,
+            minute=self.minute,
+            id=self.id,
+            replace_existing = True
+        )
+
+    def delete(self):
+        sched.remove_job(self.id)

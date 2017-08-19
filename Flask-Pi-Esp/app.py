@@ -44,7 +44,6 @@ def listTasks():
 if __name__ == "__main__":
 
     sched = BackgroundScheduler()
-
     class RegistrationForm(Form):
         days = ["mon","tue","wed","thu","fri","sat","sun"]
         pins = [0,2,4,5]

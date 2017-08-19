@@ -27,7 +27,8 @@ class DataBaseTest(unittest.TestCase):
         self.assertEquals(r.status_code, 200, "El usuario 1 no pudo ser agregado")
         r = requests.get(urlusers, auth=AUTH)
         self.assertEqual(len(r.json()), 2, "El usuario 1 no fue agregado")
-        self.assertEqual(r.json()[nwuser[0]]['nickName'],nwuser[0], "El usuario 1 no fue agregado")
+        r2 = requests.get(url+"/"+nwuser[0], auth=AUTH)
+        self.assertEqual(r.json()[str(r2.json()['id'])]['nickName'],nwuser[0], "El usuario 1 no fue agregado")
 
     def test_delUserDataBase(self):
         """Borro usuario, debe responder con status code 200"""
@@ -52,11 +53,11 @@ class DataBaseTest(unittest.TestCase):
         r = requests.put(url, json={'email': modpayload['email']}, auth=nwuser)
         self.assertEqual(r.status_code, 200, "No se pudo modificar el usuario")
         r = requests.get(urlusers, auth=AUTH)
-        self.assertEqual(r.json()[nwuser[0]]['email'], modpayload['email'], "El email usuario no fue modificado")
+        self.assertEqual(r.json()["2"]['email'], modpayload['email'], "El email usuario no fue modificado")
         r = requests.put(url, json={'nickName': modpayload['nickName']}, auth=nwuser)
         self.assertEqual(r.status_code, 200, "No se pudo modificar el usuario")
         r = requests.get(urlusers, auth=AUTH)
-        self.assertEqual(modpayload['nickName'] in r.json(), True, "El nickName usuario no fue modificado")
+        self.assertEqual(modpayload['nickName'], r.json()["2"]['nickName'], "El nickName usuario no fue modificado")
         r = requests.put(url, json={'password': modpayload['password']}, auth=(modpayload['nickName'], nwuser[1]))
         self.assertEqual(r.status_code, 200, "No se pudo modificar el usuario")
         r = requests.get(urlusers, auth=(modpayload['nickName'], modpayload['password']))
@@ -144,7 +145,8 @@ class DataBaseTest(unittest.TestCase):
         """Agrego modulos a los usuarios"""
         urlUser = BASEURL + "/User"
         urlMod = BASEURL + "/Mod"
-        url = BASEURL + "/User/mod"
+        idUser = "2"
+        url = BASEURL + "/User/"+str(idUser)+"/mod"
         user = {"nickName": "Alejo", "email":"ale.acevedo", "password":"19051996"}
         mod1 = {"uniqueID": 0}
         authUser = ("Alejo", "19051996")
@@ -154,13 +156,15 @@ class DataBaseTest(unittest.TestCase):
         self.assertEqual(r.status_code, 200, "El modulo no se agrego al usuario")
         r = requests.get(urlUser+"s", auth=authUser)
         r = r.json()
-        self.assertEqual(len(r[authUser[0]]["mods"]), 1, "El modulo no no fue agregado")
+        self.assertEqual(len(r[idUser]["mods"]), 1, "El modulo no no fue agregado")
 
     def test_delModToUserDataBase(self):
         """Agrego los modulos a los usurios y luego los borro para asegurarme que desaparezcan"""
         urlUser = BASEURL + "/User"
         urlMod = BASEURL + "/Mod"
+        idUser = "2"
         url = BASEURL + "/User/mod"
+        url1 = BASEURL + "/User/"+str(idUser)+"/mod"
         user = {"nickName": "Alejo", "email":"ale.acevedo", "password":"19051996"}
         mod1 = {"uniqueID": 0}
         mod2 = {"uniqueID": 1}
@@ -168,21 +172,81 @@ class DataBaseTest(unittest.TestCase):
         requests.post(urlUser, json=user, auth=AUTH)
         requests.post(urlMod, json=mod1, auth=AUTH)
         requests.post(urlMod, json=mod2, auth=AUTH)
-        r = requests.post(url, json={"idMod": 1}, auth=authUser)
-        r = requests.post(url, json={"idMod": 2}, auth=authUser)
+        r = requests.post(url1, json={"idMod": 1}, auth=authUser)
+        r = requests.post(url1, json={"idMod": 2}, auth=authUser)
         self.assertEqual(r.status_code, 200, "El modulo no se agrego al usuario")
         r = requests.get(urlUser+"s", auth=authUser)
         r = r.json()
-        self.assertEqual(len(r[authUser[0]]["mods"]), 2, "El modulo no fue agregado")
+        self.assertEqual(len(r[idUser]["mods"]), 2, "El modulo no fue agregado")
         r = requests.delete(url, json={"idMod": 1}, auth=authUser)
         self.assertEqual(r.status_code, 200, "El modulo no se elimino del usuario")
         r = requests.get(urlUser+"s", auth=authUser)
         r = r.json()
-        self.assertEqual(len(r[authUser[0]]["mods"]), 1, "El modulo no fue eliminado")
+        self.assertEqual(len(r[idUser]["mods"]), 1, "El modulo no fue eliminado")
         requests.delete(urlMod, json={"idMod": 2}, auth=AUTH)
         r = requests.get(urlUser+"s", auth=authUser)
         r = r.json()
-        self.assertEqual(len(r[authUser[0]]["mods"]), 0, "El modulo no fue eliminado")
+        self.assertEqual(len(r[idUser]["mods"]), 0, "El modulo no fue eliminado")
+
+    def test_addTaskDataBase(self):
+        urlUser = BASEURL + "/User"
+        urlMod = BASEURL + "/Mod"
+        urlTask = BASEURL + "/Mod/1/task"
+        user = {"nickName": "Alejo", "email":"ale.acevedo", "password":"19051996"}
+        mod1 = {"uniqueID": 0}
+        authUser = ("Alejo", "19051996")
+        url1 = BASEURL + "/User/2/mod"
+        task = {"hour": 12, "minute":12, "newState": 12, "wDay": 5}
+        requests.post(urlUser, json=user, auth=AUTH)
+        requests.post(urlMod, json=mod1, auth=AUTH)
+        requests.post(url1, json={"idMod": 1}, auth=authUser)
+        r = requests.get(urlTask, auth=authUser)
+        self.assertEqual(len(r.json()), 0, "Los task no estan vacios")
+        r = requests.post(urlTask, json=task, auth=authUser)
+        self.assertEqual(r.status_code, 200, "El task no se agrego")
+        r = requests.get(urlTask, auth=authUser)
+        self.assertEqual(len(r.json()), 1, "El task no fue agregado")
+
+    def test_chModDataBase(self):
+        urlUser = BASEURL + "/User"
+        urlMod = BASEURL + "/Mod"
+        urlTask = BASEURL + "/Mod/1/task"
+        user = {"nickName": "Alejo", "email":"ale.acevedo", "password":"19051996"}
+        mod1 = {"uniqueID": 1, "newState": "250"}
+        authUser = ("Alejo", "19051996")
+        url1 = BASEURL + "/User/2/mod"
+        task = {"hour": 12, "minute":12, "newState": 12, "wDay": 5}
+        requests.post(urlUser, json=user, auth=AUTH)
+        requests.post(urlMod, json=mod1, auth=AUTH)
+        requests.post(url1, json={"idMod": 1}, auth=authUser)
+        r = requests.get(urlTask, auth=authUser)
+        self.assertEqual(len(r.json()), 0, "Los task no estan vacios")
+        r = requests.post(urlTask, json=task, auth=authUser)
+        self.assertEqual(r.status_code, 200, "El task no se agrego")
+        r = requests.get(urlTask, auth=authUser)
+        self.assertEqual(len(r.json()), 1, "El task no fue agregado")
+        r = requests.put(urlMod, json=mod1, auth=authUser)
+
+    def test_uModDataBase(self):
+        urlUser = BASEURL + "/User"
+        urlMod = BASEURL + "/Mod"
+        urlUMod = BASEURL + "/UMod"
+        user = {"nickName": "Alejo", "email":"ale.acevedo", "password":"19051996"}
+        mod1 = {"uniqueID": 1, "newState": "250"}
+        authUser = ("Alejo", "19051996")
+        url1 = BASEURL + "/User/2/mod"
+        requests.post(urlUser, json=user, auth=AUTH)
+        requests.post(urlMod, json=mod1, auth=AUTH)
+        requests.post(url1, json={"idMod": 1}, auth=authUser)
+        r = requests.put(urlUMod+"/1/"+mod1["newState"])
+        r = requests.get(urlMod+"/1", auth=authUser)
+        r = r.json()
+        self.assertEqual(str(r["1"]['state']), mod1['newState'])
+
+
+
+
+
 
 
 

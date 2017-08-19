@@ -5,9 +5,9 @@
 
  
 // Connect to the WiFi
-const char* ssid = "casawifi";
-const char* password = "REMANSO1962";
-const char* mqtt_server = "192.168.0.247";
+const char* ssid = "Three Mile Island";
+const char* password = "11235813fibo";
+const char* mqtt_server = "192.168.0.5";
  
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -17,7 +17,7 @@ const byte ledPin2 = 2;
 const byte ledPin4 = 4;
 const byte ledPin0 = 0;
 
-char* topic1 = "turnOn";
+char* topic1 = "1";
 char* topic2 = "turnOff";
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -61,10 +61,19 @@ void reconnect() {
 void setup()
 {
  Serial.begin(9600);
- 
+ WiFi.begin(ssid,password);
+   while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("");
+  Serial.println("WiFi connected");  
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
  client.setServer(mqtt_server, 1883);
  client.setCallback(callback);
- 
+
  pinMode(ledPin5, OUTPUT);
  pinMode(ledPin0, OUTPUT);
  pinMode(ledPin2, OUTPUT);

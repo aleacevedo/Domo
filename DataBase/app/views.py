@@ -1,6 +1,6 @@
 from flask import jsonify, abort, g, request
 from flask.ext.httpauth import HTTPBasicAuth
-from app import app, db, models
+from app import app, db, models, sched, mqtt
 
 auth = HTTPBasicAuth()
 
@@ -10,8 +10,12 @@ def model_to_dict(model):
     for x in model:
         x = x.__dict__
         del x['_sa_instance_state']
-        dict[x['nickName']] = x
+        dict[x['id']] = x
     return dict
+
+@app.route('/')
+def hello_word():
+    return "Hello Word"
 
 ##USERS##
 
@@ -30,6 +34,8 @@ def get_user(id):
         user = models.User.query.filter_by(nickName=id).first()
     if not user:
         abort(500)
+    user = user.__dict__
+    del user['_sa_instance_state']
     return jsonify(user)
 
 
@@ -81,15 +87,16 @@ def del_user():
     return "OK", 200
 
 
-@app.route('/Data/api/v1.0/User/mod', methods=['POST'])
+@app.route('/Data/api/v1.0/User/<idUser>/mod', methods=['POST'])
 @auth.login_required
-def add_mod_to_user():
+def add_mod_to_user(idUser):
+    user = models.User.query.filter_by(id=idUser).first()
     idMod = request.json['idMod']
-    if models.Mods.query.filter_by(id=idMod).first() is None:
+    if models.Mods.query.filter_by(id=idMod).first() is None or user is None :
         abort(500)
-    if idMod not in g.user.mods:
-        g.user.mods.append(idMod)
-        db.session.add(g.user)
+    if idMod not in user.mods:
+        user.mods.append(idMod)
+        db.session.add(user)
         db.session.commit()
         return "OK", 200
     abort(400)
@@ -120,7 +127,7 @@ def get_mods():
 @auth.login_required
 def get_mod(id):
     if models.Mods.query.filter_by(id=id).first() is None: abort(500)
-    return jsonify(models.Mods.query.filter_by(id=id).first())
+    return jsonify(model_to_dict(models.Mods.query.filter_by(id=id)))
 
 
 @app.route('/Data/api/v1.0/Mod', methods=['POST'])
@@ -136,11 +143,33 @@ def add_mod():
     db.session.commit()
     return "OK", 200
 
+@app.route('/Data/api/v1.0/Mod', methods=['PUT'])
+@auth.login_required
+def change_mod():
+    try:
+        uniqueID = request.json['uniqueID']
+        newState = request.json['newState']
+    except KeyError:
+        abort(500)
+    mod = models.Mods.query.filter_by(uniqueID=uniqueID).first()
+    if mod is None or mod.id not in g.user.mods:
+        abort(401)
+    mod.execute_change(newState)
+    return "OK", 200
+
+@app.route('/Data/api/v1.0/UMod/<uniqueID>/<newState>', methods=['PUT'])
+def update_mod(uniqueID, newState):
+    mod = models.Mods.query.filter_by(uniqueID=uniqueID).first()
+    if mod is None:
+        abort(401)
+    mod.state = newState
+    db.session.commit()
+    return "OK", 200
+
 
 @app.route('/Data/api/v1.0/Mod', methods=['DELETE'])
 @auth.login_required
 def del_mod():
-    print("entro a delete")
     if g.user.nickName != 'admin':
         abort(401)
     if('idMod' in request.json):
@@ -156,6 +185,46 @@ def del_mod():
             db.session.add(user)
             db.session.commit()
     db.session.delete(mod)
+    db.session.commit()
+    return "OK", 200
+
+
+##TASKS##
+@app.route('/Data/api/v1.0/Mod/<idMod>/task')
+@auth.login_required
+def get_task_of(idMod):
+    if models.Mods.query.filter_by(id=idMod).first() is None: abort(500)
+    tasks=models.Task.query.filter_by(idMod=idMod).all()
+    return jsonify(model_to_dict(tasks))
+
+
+@app.route('/Data/api/v1.0/Mod/<idMod>/task', methods=['POST'])
+@auth.login_required
+def add_task_to(idMod):
+    mod = models.Mods.query.filter_by(id=idMod).first()
+    task = models.Task()
+    if mod is None: abort(500)
+    if mod.id not in g.user.mods: abort(401)
+    task.idMod = idMod
+    task.hour = request.json['hour']
+    task.minute = request.json['minute']
+    task.wDay = request.json['wDay']
+    task.newState = request.json['newState']
+    task.save(mod)
+    db.session.add(task)
+    db.session.commit()
+    return "OK", 200
+
+
+@app.route('/Data/api/v1.0/Mod/<idMod>/task', methods=['DELETE'])
+@auth.login_required
+def del_task_of(idMod):
+    mod = models.Mods.query.filter_by(id=idMod).firts()
+    task = models.Task().query.filter_by(id=request.json('id'))
+    if mod is None: abort(500)
+    if mod.id not in g.user.mods: abort(401)
+    task.delete()
+    db.session.delete(task)
     db.session.commit()
     return "OK", 200
 
