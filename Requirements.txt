@@ -1,0 +1,10 @@
+flask
+sqlalchemy
+flask-sqlalchemy
+apscheduler
+flask-httpauth
+paho-mqtt
+passlib
+requests
+migrate
+sqlalchemy-migrate
