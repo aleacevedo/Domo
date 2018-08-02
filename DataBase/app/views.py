@@ -1,5 +1,5 @@
 from flask import jsonify, abort, g, request
-from flask.ext.httpauth import HTTPBasicAuth
+from flask_httpauth import HTTPBasicAuth
 from app import app, db, models, sched, mqtt
 
 auth = HTTPBasicAuth()
