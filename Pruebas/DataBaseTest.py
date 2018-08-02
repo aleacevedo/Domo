@@ -212,7 +212,7 @@ class DataBaseTest(unittest.TestCase):
         urlMod = BASEURL + "/Mod"
         urlTask = BASEURL + "/Mod/1/task"
         user = {"nickName": "Alejo", "email":"ale.acevedo", "password":"19051996"}
-        mod1 = {"uniqueID": 1, "newState": "250"}
+        mod1 = {"uniqueID": 1, "newState": "255"}
         authUser = ("Alejo", "19051996")
         url1 = BASEURL + "/User/2/mod"
         task = {"hour": 12, "minute":12, "newState": 12, "wDay": 5}
